@@ -2,7 +2,7 @@
   "name": "bokio-invoice-helper",
   "version": "0.1.0",
   "private": true,
-  "license": "0BSD",
+  "license": "GPL-3.0-only",
   "description": "Defaults Bokio invoices to PDF & link so the wrong delivery method does not become a late-payment surprise.",
   "scripts": {
     "test": "node --test tests/*.spec.mjs",

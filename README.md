@@ -7,7 +7,8 @@ was never paid because the delivery method was wrong? No more.
 
 Invoice Helper for Bokio quietly sets **PDF & link** as the default invoice
 method, so your invoices go out with the delivery option you actually meant
-to choose.
+to choose. It works across all Bokio interface languages because it targets
+the underlying delivery option instead of visible text.
 
 This is a small WebExtension that runs only on Bokio invoice edit pages:
 
@@ -64,7 +65,7 @@ The selectors intentionally avoid visible text so Bokio can be used in Swedish o
 
 ## License
 
-This project is licensed under the [BSD Zero Clause License](LICENSE).
+This project is licensed under the [GNU General Public License v3.0 only](LICENSE).
 
 ## Disclaimer
 
