@@ -1,0 +1,14 @@
+{
+  "name": "bokio-plus-invoice-helper",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PDF & link as default invoice method",
+  "scripts": {
+    "test": "node --test tests/content.spec.mjs",
+    "generate-icons": "node tools/generate-icons.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.52.0",
+    "sharp": "^0.33.5"
+  }
+}

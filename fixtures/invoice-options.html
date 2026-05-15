@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="utf-8">
+    <title>Bokio invoice fixture</title>
+  </head>
+  <body>
+    <main>
+      <section data-testid="email-section">
+        <h1 data-fixture-heading>Invoice delivery options</h1>
+        <label data-value="Link" data-name="emailDeliveryType">
+          <input
+            data-testid="EmailMethod_DeliveryType_Radio"
+            type="radio"
+            value="Link"
+            checked
+            name="emailDeliveryType"
+          >
+          <span data-fixture-text>Language-independent placeholder A</span>
+        </label>
+        <label data-value="LinkAndPdf" data-name="emailDeliveryType">
+          <input
+            data-testid="EmailMethod_DeliveryType_Radio"
+            type="radio"
+            value="LinkAndPdf"
+            name="emailDeliveryType"
+          >
+          <span data-fixture-text>Language-independent placeholder B</span>
+        </label>
+      </section>
+    </main>
+  </body>
+</html>
