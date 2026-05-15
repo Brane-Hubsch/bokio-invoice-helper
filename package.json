@@ -1,8 +1,9 @@
 {
-  "name": "bokio-plus-invoice-helper",
+  "name": "bokio-invoice-helper",
   "version": "0.1.0",
   "private": true,
-  "description": "PDF & link as default invoice method",
+  "license": "0BSD",
+  "description": "Defaults Bokio invoices to PDF & link so the wrong delivery method does not become a late-payment surprise.",
   "scripts": {
     "test": "node --test tests/content.spec.mjs",
     "generate-icons": "node tools/generate-icons.mjs"
