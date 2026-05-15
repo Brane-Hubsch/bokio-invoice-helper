@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Bokio Invoice Helper",
+  "name": "Invoice Helper for Bokio",
   "description": "Defaults Bokio invoices to PDF & link so the wrong delivery method does not become a late-payment surprise.",
   "version": "0.1.0",
   "icons": {
@@ -9,6 +9,20 @@
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
   },
+  "action": {
+    "default_icon": {
+      "16": "icons/icon-inactive-16.png",
+      "32": "icons/icon-inactive-32.png",
+      "48": "icons/icon-inactive-48.png",
+      "128": "icons/icon-inactive-128.png"
+    }
+  },
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "host_permissions": [
+    "https://app.bokio.se/*"
+  ],
   "content_scripts": [
     {
       "matches": [

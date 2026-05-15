@@ -1,1 +1,4 @@
-Generated from icons/source/icon.png with tools/generate-icons.mjs.
+Generated with tools/generate-icons.mjs.
+
+- Active icons: icons/source/icon.png
+- Inactive icons: icons/source/icon-inactive.png

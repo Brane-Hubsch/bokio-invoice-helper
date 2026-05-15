@@ -1,11 +1,11 @@
-![Bokio Invoice Helper icon](icons/icon-128.png)
+![Invoice Helper for Bokio marquee](docs/images/invoice-helper-marquee.png)
 
-# Bokio Invoice Helper
+# Invoice Helper for Bokio
 
 Ever sent an invoice from Bokio, only to discover a month later that it
 was never paid because the delivery method was wrong? No more.
 
-Bokio Invoice Helper quietly sets **PDF & link** as the default invoice
+Invoice Helper for Bokio quietly sets **PDF & link** as the default invoice
 method, so your invoices go out with the delivery option you actually meant
 to choose.
 
@@ -16,6 +16,12 @@ https://app.bokio.se/*/invoicing/invoices/edit/*
 ```
 
 When Bokio has already rendered the email delivery options, the extension selects the code-defined `LinkAndPdf` invoice delivery type. It does not select the outer "email to customer" delivery method.
+
+## Screenshots
+
+| Without Invoice Helper | With Invoice Helper |
+| --- | --- |
+| ![Bokio invoice delivery options without Invoice Helper](docs/images/without-invoice-helper.png) | ![Bokio invoice delivery options with Invoice Helper](docs/images/with-invoice-helper.png) |
 
 ## Install in Chrome or Opera
 

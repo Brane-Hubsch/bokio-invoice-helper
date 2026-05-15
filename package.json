@@ -5,7 +5,7 @@
   "license": "0BSD",
   "description": "Defaults Bokio invoices to PDF & link so the wrong delivery method does not become a late-payment surprise.",
   "scripts": {
-    "test": "node --test tests/content.spec.mjs",
+    "test": "node --test tests/*.spec.mjs",
     "generate-icons": "node tools/generate-icons.mjs"
   },
   "devDependencies": {
