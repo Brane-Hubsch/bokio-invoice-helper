@@ -10,6 +10,10 @@ https://app.bokio.se/*/invoicing/invoices/edit/*
 
 When Bokio has already rendered the email delivery options, the extension selects the code-defined `LinkAndPdf` invoice delivery type. It does not select the outer "email to customer" delivery method.
 
+## Disclaimer
+
+Bokio, including the Bokio name and logo, is owned by and trademarked by Bokio AB. This project is not affiliated with, endorsed by, or sponsored by Bokio AB.
+
 ## Install in Chrome or Opera
 
 1. Open `chrome://extensions` or `opera://extensions`.

@@ -1,1 +1,1 @@
-Generated from Bokio favicon with tools/generate-icons.mjs.
+Generated from icons/source/icon.png with tools/generate-icons.mjs.
