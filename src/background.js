@@ -14,6 +14,8 @@
     128: "icons/icon-inactive-128.png"
   };
   const ACTIVE_ORIGIN = "https://app.bokio.se";
+  const APP_URL_PATTERN = "https://app.bokio.se/*";
+  const CONTENT_SCRIPT_FILES = ["src/icon-state.js", "src/content.js"];
 
   function isActiveUrl(url) {
     try {
@@ -27,16 +29,24 @@
     return isActiveUrl(url) ? ACTIVE_ICON_PATHS : INACTIVE_ICON_PATHS;
   }
 
+  function isActiveSender(sender) {
+    return isActiveUrl(sender.url || sender.origin || "");
+  }
+
+  function setIcon(tabId, path) {
+    return chrome.action.setIcon({
+      tabId,
+      path
+    });
+  }
+
   async function setIconForTab(tab) {
     if (!tab || typeof tab.id !== "number") {
       return;
     }
 
     try {
-      await chrome.action.setIcon({
-        tabId: tab.id,
-        path: iconPathsForUrl(tab.url)
-      });
+      await setIcon(tab.id, iconPathsForUrl(tab.url));
     } catch {
       // The tab can disappear while Chrome is delivering tab events.
     }
@@ -55,6 +65,41 @@
     }
 
     await setIconForTab(tabs[0]);
+  }
+
+  async function injectScriptsIntoTab(tab) {
+    if (!tab || typeof tab.id !== "number" || !isActiveUrl(tab.url)) {
+      return;
+    }
+
+    if (!chrome.scripting || typeof chrome.scripting.executeScript !== "function") {
+      return;
+    }
+
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: CONTENT_SCRIPT_FILES
+      });
+    } catch {
+      // Existing tabs may be restricted, discarded, or navigating while we inject.
+    }
+  }
+
+  async function injectScriptsIntoExistingTabs() {
+    if (!chrome.tabs || typeof chrome.tabs.query !== "function") {
+      return;
+    }
+
+    let tabs;
+
+    try {
+      tabs = await chrome.tabs.query({ url: APP_URL_PATTERN });
+    } catch {
+      return;
+    }
+
+    await Promise.all(tabs.map(injectScriptsIntoTab));
   }
 
   function setIconForTabId(tabId) {
@@ -85,8 +130,31 @@
     return;
   }
 
-  chrome.runtime.onInstalled.addListener(setIconForActiveTab);
-  chrome.runtime.onStartup.addListener(setIconForActiveTab);
+  chrome.runtime.onMessage.addListener(function (message, sender) {
+    if (
+      message?.type !== "bokio-invoice-helper:app-tab" ||
+      !isActiveSender(sender) ||
+      typeof sender.tab?.id !== "number"
+    ) {
+      return;
+    }
+
+    const pending = setIcon(sender.tab.id, ACTIVE_ICON_PATHS);
+
+    if (pending && typeof pending.catch === "function") {
+      pending.catch(function () {});
+    }
+  });
+
+  chrome.runtime.onInstalled.addListener(function () {
+    setIconForActiveTab();
+    injectScriptsIntoExistingTabs();
+  });
+
+  chrome.runtime.onStartup.addListener(function () {
+    setIconForActiveTab();
+    injectScriptsIntoExistingTabs();
+  });
 
   chrome.tabs.onActivated.addListener(function ({ tabId }) {
     setIconForTabId(tabId);

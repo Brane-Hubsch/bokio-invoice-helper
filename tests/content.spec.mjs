@@ -165,6 +165,28 @@ test("resets the one-time selection after SPA navigation to another invoice edit
   });
 });
 
+test("selects LinkAndPdf after SPA navigation from a non-invoice route", async () => {
+  const bodyHtml = await readFile(FIXTURE, "utf8");
+
+  await withPage(OTHER_URL, bodyHtml, async (page) => {
+    assert.equal(await checkedValue(page), "Link");
+
+    await page.evaluate((url) => {
+      window.history.pushState({}, "", url);
+      document.querySelector("main").append(document.createElement("div"));
+    }, MATCHING_URL);
+
+    await page.waitForFunction(
+      () =>
+        document.querySelector(
+          'input[name="emailDeliveryType"][value="LinkAndPdf"]'
+        )?.checked
+    );
+
+    assert.equal(await checkedValue(page), "LinkAndPdf");
+  });
+});
+
 test("does nothing on non-invoice-edit Bokio routes", async () => {
   const bodyHtml = await readFile(FIXTURE, "utf8");
 

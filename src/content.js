@@ -1,6 +1,12 @@
 (function () {
   "use strict";
 
+  if (window.__bokioInvoiceHelperContentLoaded) {
+    return;
+  }
+
+  window.__bokioInvoiceHelperContentLoaded = true;
+
   const ROUTE_RE = /^\/[^/]+\/invoicing\/invoices\/edit\/[^/]+(?:\/|$)/;
   const TARGET_LABEL_SELECTOR =
     'label[data-name="emailDeliveryType"][data-value="LinkAndPdf"]';

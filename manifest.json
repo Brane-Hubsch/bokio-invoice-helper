@@ -20,13 +20,26 @@
   "background": {
     "service_worker": "src/background.js"
   },
+  "permissions": [
+    "scripting",
+    "tabs"
+  ],
   "host_permissions": [
     "https://app.bokio.se/*"
   ],
   "content_scripts": [
     {
       "matches": [
-        "https://app.bokio.se/*/invoicing/invoices/edit/*"
+        "https://app.bokio.se/*"
+      ],
+      "js": [
+        "src/icon-state.js"
+      ],
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "https://app.bokio.se/*"
       ],
       "js": [
         "src/content.js"
