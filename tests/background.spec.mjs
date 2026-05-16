@@ -133,8 +133,9 @@ test("manifest keeps the icon feature route-scoped without troubleshooting scrip
   assert.equal(manifest.background.service_worker, "src/background.js");
   assert.equal(manifest.action.default_popup, "src/popup.html");
   assert.equal(existsSync(resolve(ROOT, manifest.action.default_popup)), true);
-  assert.equal(manifest.permissions?.includes("tabs"), undefined);
-  assert.equal(manifest.permissions?.includes("scripting"), undefined);
+  assert.equal(manifest.permissions.includes("storage"), true);
+  assert.equal(manifest.permissions.includes("tabs"), false);
+  assert.equal(manifest.permissions.includes("scripting"), false);
   assert.equal(manifest.host_permissions.includes("https://app.bokio.se/*"), true);
   assert.equal(existsSync(resolve(ROOT, "src/icon-state.js")), false);
   assert.equal(

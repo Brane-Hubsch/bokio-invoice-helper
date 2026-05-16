@@ -51,20 +51,38 @@ async function loadPopupHelpers() {
   return sandbox.__bokioInvoiceHelperPopup;
 }
 
-async function withPopup(activeTabUrl, callback) {
+async function withPopup(activeTabUrl, callback, options = {}) {
   const browser = await launchBrowser();
   const page = await browser.newPage();
 
   try {
-    await page.addInitScript((url) => {
+    await page.addInitScript(({ url, autoselectEmailDelivery }) => {
+      window.__storageWrites = [];
       window.chrome = {
         tabs: {
           query() {
             return Promise.resolve([{ url }]);
           }
+        },
+        storage: {
+          local: {
+            get(defaults, callback) {
+              callback({
+                ...defaults,
+                autoselectEmailDelivery: Boolean(autoselectEmailDelivery)
+              });
+            },
+            set(items) {
+              window.__storageWrites.push(items);
+              return Promise.resolve();
+            }
+          }
         }
       };
-    }, activeTabUrl);
+    }, {
+      url: activeTabUrl,
+      autoselectEmailDelivery: options.autoselectEmailDelivery
+    });
 
     await page.goto(pathToFileURL(POPUP_HTML).href);
     await callback(page);
@@ -118,7 +136,7 @@ test("popup shows inactive copy outside app.bokio.se", async () => {
   });
 });
 
-test("popup renders an inert unchecked e-mail delivery toggle", async () => {
+test("popup renders an unchecked e-mail delivery toggle by default", async () => {
   await withPopup("https://app.bokio.se/company-id", async (page) => {
     const toggle = page.locator('input[type="checkbox"]');
 
@@ -132,6 +150,33 @@ test("popup renders an inert unchecked e-mail delivery toggle", async () => {
       await page.locator("label.toggle-row").textContent(),
       /Autoselect E-mail delivery/
     );
+  });
+});
+
+test("popup reads the saved e-mail delivery toggle setting", async () => {
+  await withPopup(
+    "https://app.bokio.se/company-id",
+    async (page) => {
+      const toggle = page.locator('input[type="checkbox"]');
+
+      await page.waitForFunction(
+        () => document.querySelector('input[type="checkbox"]')?.checked
+      );
+
+      assert.equal(await toggle.isChecked(), true);
+    },
+    { autoselectEmailDelivery: true }
+  );
+});
+
+test("popup saves e-mail delivery toggle changes", async () => {
+  await withPopup("https://app.bokio.se/company-id", async (page) => {
+    await page.locator("label.toggle-row").click();
+    await page.waitForFunction(() => window.__storageWrites.length > 0);
+
+    assert.deepEqual(await page.evaluate(() => window.__storageWrites.at(-1)), {
+      autoselectEmailDelivery: true
+    });
   });
 });
 

@@ -13,6 +13,11 @@
   const TARGET_INPUT_SELECTOR =
     'input[name="emailDeliveryType"][value="LinkAndPdf"]';
   const DELIVERY_INPUT_SELECTOR = 'input[name="emailDeliveryType"]';
+  const EMAIL_DELIVERY_INPUT_SELECTOR =
+    'input[data-testid="EmailMethod_DeliveryItem"][type="radio"]';
+  const DELIVERY_METHOD_INPUT_SELECTOR =
+    'input[type="radio"][data-testid$="DeliveryItem"]';
+  const AUTOSELECT_EMAIL_DELIVERY_KEY = "autoselectEmailDelivery";
   const DEBOUNCE_MS = 50;
 
   const state = {
@@ -20,6 +25,10 @@
     applied: false,
     manualOptOut: false,
     applying: false,
+    autoselectEmailDelivery: false,
+    emailDeliveryApplied: false,
+    emailDeliveryManualOptOut: false,
+    emailDeliveryApplying: false,
     timer: 0
   };
 
@@ -36,6 +45,9 @@
       state.applied = false;
       state.manualOptOut = false;
       state.applying = false;
+      state.emailDeliveryApplied = false;
+      state.emailDeliveryManualOptOut = false;
+      state.emailDeliveryApplying = false;
     }
 
     return nextRouteKey;
@@ -47,6 +59,13 @@
       ? label.querySelector('input[type="radio"], input[name="emailDeliveryType"]')
       : null;
     const input = labelInput || document.querySelector(TARGET_INPUT_SELECTOR);
+
+    return { label, input };
+  }
+
+  function findEmailDeliveryControl() {
+    const input = document.querySelector(EMAIL_DELIVERY_INPUT_SELECTOR);
+    const label = input ? input.closest("label") : null;
 
     return { label, input };
   }
@@ -98,9 +117,58 @@
     }, 0);
   }
 
+  function markEmailDeliveryAppliedIfSelected(input) {
+    if (input && input.checked) {
+      state.emailDeliveryApplied = true;
+      return true;
+    }
+
+    return false;
+  }
+
+  function chooseEmailDelivery() {
+    if (
+      !syncRoute() ||
+      !state.autoselectEmailDelivery ||
+      state.emailDeliveryApplied ||
+      state.emailDeliveryManualOptOut ||
+      state.emailDeliveryApplying
+    ) {
+      return;
+    }
+
+    const { label, input } = findEmailDeliveryControl();
+
+    if (!input || isDisabled(input) || isDisabled(label)) {
+      return;
+    }
+
+    if (markEmailDeliveryAppliedIfSelected(input)) {
+      return;
+    }
+
+    state.emailDeliveryApplying = true;
+    (label || input).click();
+
+    window.setTimeout(function () {
+      const selectedInput = document.querySelector(EMAIL_DELIVERY_INPUT_SELECTOR);
+      markEmailDeliveryAppliedIfSelected(selectedInput || input);
+      state.emailDeliveryApplying = false;
+
+      if (!state.emailDeliveryApplied && !state.emailDeliveryManualOptOut) {
+        scheduleChoose();
+      }
+    }, 0);
+  }
+
+  function chooseInvoiceOptions() {
+    chooseEmailDelivery();
+    chooseLinkAndPdf();
+  }
+
   function scheduleChoose() {
     window.clearTimeout(state.timer);
-    state.timer = window.setTimeout(chooseLinkAndPdf, DEBOUNCE_MS);
+    state.timer = window.setTimeout(chooseInvoiceOptions, DEBOUNCE_MS);
   }
 
   function handleDeliveryTypeChange(event) {
@@ -126,6 +194,91 @@
     }
   }
 
+  function handleDeliveryMethodChange(event) {
+    if (!syncRoute() || state.emailDeliveryApplying) {
+      return;
+    }
+
+    const input = event.target;
+
+    if (
+      input instanceof HTMLInputElement &&
+      input.matches(DELIVERY_METHOD_INPUT_SELECTOR) &&
+      input.checked
+    ) {
+      if (input.matches(EMAIL_DELIVERY_INPUT_SELECTOR)) {
+        state.emailDeliveryApplied = true;
+        return;
+      }
+
+      if (state.emailDeliveryApplied) {
+        state.emailDeliveryManualOptOut = true;
+      }
+    }
+  }
+
+  function storageArea() {
+    if (
+      typeof chrome === "undefined" ||
+      !chrome.storage ||
+      !chrome.storage.local
+    ) {
+      return null;
+    }
+
+    return chrome.storage.local;
+  }
+
+  async function loadAutoselectEmailDelivery() {
+    const storage = storageArea();
+
+    if (!storage || typeof storage.get !== "function") {
+      return false;
+    }
+
+    try {
+      return await new Promise((resolve) => {
+        const fallback = { [AUTOSELECT_EMAIL_DELIVERY_KEY]: false };
+        const maybePromise = storage.get(fallback, function (items) {
+          resolve(Boolean(items?.[AUTOSELECT_EMAIL_DELIVERY_KEY]));
+        });
+
+        if (maybePromise && typeof maybePromise.then === "function") {
+          maybePromise
+            .then((items) => resolve(Boolean(items?.[AUTOSELECT_EMAIL_DELIVERY_KEY])))
+            .catch(() => resolve(false));
+        }
+      });
+    } catch {
+      return false;
+    }
+  }
+
+  function watchAutoselectEmailDelivery() {
+    if (
+      typeof chrome === "undefined" ||
+      !chrome.storage ||
+      !chrome.storage.onChanged ||
+      typeof chrome.storage.onChanged.addListener !== "function"
+    ) {
+      return;
+    }
+
+    chrome.storage.onChanged.addListener(function (changes, areaName) {
+      const change = changes[AUTOSELECT_EMAIL_DELIVERY_KEY];
+
+      if (areaName !== "local" || !change) {
+        return;
+      }
+
+      state.autoselectEmailDelivery = Boolean(change.newValue);
+      state.emailDeliveryApplied = false;
+      state.emailDeliveryManualOptOut = false;
+      state.emailDeliveryApplying = false;
+      scheduleChoose();
+    });
+  }
+
   function patchHistoryMethod(methodName) {
     const original = window.history[methodName];
 
@@ -141,9 +294,11 @@
   }
 
   document.addEventListener("change", handleDeliveryTypeChange, true);
+  document.addEventListener("change", handleDeliveryMethodChange, true);
   window.addEventListener("popstate", scheduleChoose);
   patchHistoryMethod("pushState");
   patchHistoryMethod("replaceState");
+  watchAutoselectEmailDelivery();
 
   const observer = new MutationObserver(scheduleChoose);
   observer.observe(document.documentElement, {
@@ -151,5 +306,8 @@
     subtree: true
   });
 
-  scheduleChoose();
+  loadAutoselectEmailDelivery().then(function (value) {
+    state.autoselectEmailDelivery = value;
+    scheduleChoose();
+  });
 })();

@@ -6,6 +6,27 @@
   </head>
   <body>
     <main>
+      <section data-testid="delivery-method-section">
+        <h1 data-fixture-heading>Delivery method options</h1>
+        <label>
+          <input
+            data-testid="EmailMethod_DeliveryItem"
+            type="radio"
+            name="deliveryMethod"
+          >
+          <span data-fixture-text>E-mail to customer</span>
+        </label>
+        <label>
+          <input
+            data-testid="EInvoiceDeliveryItem"
+            type="radio"
+            name="deliveryMethod"
+            checked
+          >
+          <span data-fixture-text>E-invoice</span>
+        </label>
+      </section>
+
       <section data-testid="email-section">
         <h1 data-fixture-heading>Invoice delivery options</h1>
         <label data-value="Link" data-name="emailDeliveryType">

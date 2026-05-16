@@ -21,6 +21,9 @@
   "background": {
     "service_worker": "src/background.js"
   },
+  "permissions": [
+    "storage"
+  ],
   "host_permissions": [
     "https://app.bokio.se/*"
   ],
