@@ -8,6 +8,10 @@ const sharp = require("sharp");
 const ROOT = resolve(import.meta.dirname, "..");
 const SOURCES = [
   {
+    source: resolve(ROOT, "icons/source/store-icon.png"),
+    outputName: "store-icon"
+  },
+  {
     source: resolve(ROOT, "icons/source/icon.png"),
     outputName: "icon"
   },
@@ -37,6 +41,7 @@ await writeFile(
   [
     "Generated with tools/generate-icons.mjs.",
     "",
+    "- Store icons: icons/source/store-icon.png",
     "- Active icons: icons/source/icon.png",
     "- Inactive icons: icons/source/icon-inactive.png",
     ""

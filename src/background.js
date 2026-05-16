@@ -14,8 +14,8 @@
     128: "icons/icon-inactive-128.png"
   };
   const ACTIVE_ORIGIN = "https://app.bokio.se";
-  const APP_URL_PATTERN = "https://app.bokio.se/*";
-  const CONTENT_SCRIPT_FILES = ["src/icon-state.js", "src/content.js"];
+
+  const iconImageDataCache = new Map();
 
   function isActiveUrl(url) {
     try {
@@ -29,14 +29,59 @@
     return isActiveUrl(url) ? ACTIVE_ICON_PATHS : INACTIVE_ICON_PATHS;
   }
 
-  function isActiveSender(sender) {
-    return isActiveUrl(sender.url || sender.origin || "");
+  async function imageDataForIconPath(path, size) {
+    const response = await fetch(chrome.runtime.getURL(path));
+    const blob = await response.blob();
+    const bitmap = await createImageBitmap(blob);
+    const canvas = new OffscreenCanvas(size, size);
+    const context = canvas.getContext("2d");
+
+    context.clearRect(0, 0, size, size);
+    context.drawImage(bitmap, 0, 0, bitmap.width, bitmap.height, 0, 0, size, size);
+
+    if (typeof bitmap.close === "function") {
+      bitmap.close();
+    }
+
+    return context.getImageData(0, 0, size, size);
   }
 
-  function setIcon(tabId, path) {
-    return chrome.action.setIcon({
-      tabId,
-      path
+  async function imageDataForIconPaths(paths) {
+    const cacheKey = JSON.stringify(paths);
+
+    if (!iconImageDataCache.has(cacheKey)) {
+      iconImageDataCache.set(
+        cacheKey,
+        Promise.all(
+          Object.entries(paths).map(async ([size, path]) => [
+            size,
+            await imageDataForIconPath(path, Number(size))
+          ])
+        ).then(Object.fromEntries)
+      );
+    }
+
+    return iconImageDataCache.get(cacheKey);
+  }
+
+  async function setIcon(tabId, imageData) {
+    await new Promise((resolve, reject) => {
+      chrome.action.setIcon(
+        {
+          tabId,
+          imageData
+        },
+        function () {
+          const error = chrome.runtime.lastError;
+
+          if (error) {
+            reject(error);
+            return;
+          }
+
+          resolve();
+        }
+      );
     });
   }
 
@@ -46,7 +91,8 @@
     }
 
     try {
-      await setIcon(tab.id, iconPathsForUrl(tab.url));
+      const imageData = await imageDataForIconPaths(iconPathsForUrl(tab.url));
+      await setIcon(tab.id, imageData);
     } catch {
       // The tab can disappear while Chrome is delivering tab events.
     }
@@ -65,41 +111,6 @@
     }
 
     await setIconForTab(tabs[0]);
-  }
-
-  async function injectScriptsIntoTab(tab) {
-    if (!tab || typeof tab.id !== "number" || !isActiveUrl(tab.url)) {
-      return;
-    }
-
-    if (!chrome.scripting || typeof chrome.scripting.executeScript !== "function") {
-      return;
-    }
-
-    try {
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        files: CONTENT_SCRIPT_FILES
-      });
-    } catch {
-      // Existing tabs may be restricted, discarded, or navigating while we inject.
-    }
-  }
-
-  async function injectScriptsIntoExistingTabs() {
-    if (!chrome.tabs || typeof chrome.tabs.query !== "function") {
-      return;
-    }
-
-    let tabs;
-
-    try {
-      tabs = await chrome.tabs.query({ url: APP_URL_PATTERN });
-    } catch {
-      return;
-    }
-
-    await Promise.all(tabs.map(injectScriptsIntoTab));
   }
 
   function setIconForTabId(tabId) {
@@ -130,31 +141,8 @@
     return;
   }
 
-  chrome.runtime.onMessage.addListener(function (message, sender) {
-    if (
-      message?.type !== "bokio-invoice-helper:app-tab" ||
-      !isActiveSender(sender) ||
-      typeof sender.tab?.id !== "number"
-    ) {
-      return;
-    }
-
-    const pending = setIcon(sender.tab.id, ACTIVE_ICON_PATHS);
-
-    if (pending && typeof pending.catch === "function") {
-      pending.catch(function () {});
-    }
-  });
-
-  chrome.runtime.onInstalled.addListener(function () {
-    setIconForActiveTab();
-    injectScriptsIntoExistingTabs();
-  });
-
-  chrome.runtime.onStartup.addListener(function () {
-    setIconForActiveTab();
-    injectScriptsIntoExistingTabs();
-  });
+  chrome.runtime.onInstalled.addListener(setIconForActiveTab);
+  chrome.runtime.onStartup.addListener(setIconForActiveTab);
 
   chrome.tabs.onActivated.addListener(function ({ tabId }) {
     setIconForTabId(tabId);

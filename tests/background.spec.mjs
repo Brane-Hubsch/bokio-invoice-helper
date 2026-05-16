@@ -18,56 +18,91 @@ async function loadBackgroundHelpers() {
   return sandbox.__bokioInvoiceHelperBackground;
 }
 
-async function loadBackgroundWithChromeMock({ queryTabs = [] } = {}) {
+async function loadBackgroundWithChromeMock({ activeTab } = {}) {
   const code = await readFile(BACKGROUND_SCRIPT, "utf8");
   const calls = [];
-  const scriptCalls = [];
-  let installedListener;
-  let messageListener;
+  const fetched = [];
+
+  class FakeOffscreenCanvas {
+    constructor(width, height) {
+      this.width = width;
+      this.height = height;
+      this.source = "";
+    }
+
+    getContext() {
+      return {
+        clearRect() {},
+        drawImage: (bitmap) => {
+          this.source = bitmap.source;
+        },
+        getImageData: () => ({
+          source: this.source,
+          width: this.width,
+          height: this.height
+        })
+      };
+    }
+  }
 
   const chrome = {
     action: {
-      setIcon(options) {
+      setIcon(options, callback) {
         calls.push(options);
-        return Promise.resolve();
+
+        if (callback) {
+          callback();
+        }
       }
     },
     runtime: {
-      onInstalled: {
-        addListener(listener) {
-          installedListener = listener;
-        }
+      getURL(path) {
+        return `chrome-extension://extension-id/${path}`;
       },
-      onMessage: {
-        addListener(listener) {
-          messageListener = listener;
-        }
-      },
+      onInstalled: { addListener() {} },
       onStartup: { addListener() {} }
     },
     tabs: {
       get() {},
       onActivated: { addListener() {} },
       onUpdated: { addListener() {} },
-      query(options) {
-        if (options?.url) {
-          return Promise.resolve(queryTabs);
-        }
-
-        return Promise.resolve([]);
-      }
-    },
-    scripting: {
-      executeScript(options) {
-        scriptCalls.push(options);
-        return Promise.resolve();
+      query() {
+        return Promise.resolve(activeTab ? [activeTab] : []);
       }
     }
   };
 
-  vm.runInNewContext(code, { chrome, URL });
+  const sandbox = {
+    chrome,
+    createImageBitmap(blob) {
+      return Promise.resolve({
+        close() {},
+        height: 850,
+        source: blob.source,
+        width: 850
+      });
+    },
+    fetch(url) {
+      fetched.push(url);
 
-  return { calls, installedListener, messageListener, scriptCalls };
+      return Promise.resolve({
+        blob() {
+          return Promise.resolve({ source: url });
+        }
+      });
+    },
+    OffscreenCanvas: FakeOffscreenCanvas,
+    URL
+  };
+
+  vm.runInNewContext(code, sandbox);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  return { calls, fetched };
+}
+
+function serialize(value) {
+  return JSON.parse(JSON.stringify(value));
 }
 
 test("uses the active icon on app.bokio.se pages", async () => {
@@ -92,66 +127,75 @@ test("uses the inactive icon outside app.bokio.se", async () => {
   );
 });
 
-test("manifest declares toolbar icon assets that exist", async () => {
+test("manifest keeps the icon feature route-scoped without troubleshooting scripts", async () => {
   const manifest = JSON.parse(await readFile(MANIFEST, "utf8"));
 
   assert.equal(manifest.background.service_worker, "src/background.js");
-  assert.equal(manifest.permissions.includes("tabs"), true);
-  assert.equal(manifest.permissions.includes("scripting"), true);
+  assert.equal(manifest.permissions?.includes("tabs"), undefined);
+  assert.equal(manifest.permissions?.includes("scripting"), undefined);
   assert.equal(manifest.host_permissions.includes("https://app.bokio.se/*"), true);
+  assert.equal(existsSync(resolve(ROOT, "src/icon-state.js")), false);
   assert.equal(
-    manifest.content_scripts.some(
-      (script) =>
-        script.matches.includes("https://app.bokio.se/*") &&
-        script.js.includes("src/icon-state.js")
+    manifest.content_scripts.some((script) =>
+      script.js.includes("src/icon-state.js")
     ),
-    true
+    false
   );
   assert.equal(
     manifest.content_scripts.some(
       (script) =>
-        script.matches.includes("https://app.bokio.se/*") &&
-        script.js.includes("src/content.js")
+        script.matches.includes(
+          "https://app.bokio.se/*/invoicing/invoices/edit/*"
+        ) && script.js.includes("src/content.js")
     ),
     true
   );
 
+  for (const iconPath of Object.values(manifest.icons)) {
+    assert.match(iconPath, /^icons\/store-icon-\d+\.png$/);
+    assert.equal(existsSync(resolve(ROOT, iconPath)), true, `${iconPath} should exist`);
+  }
+
   for (const iconPath of Object.values(manifest.action.default_icon)) {
+    assert.match(iconPath, /^icons\/icon-inactive-\d+\.png$/);
     assert.equal(existsSync(resolve(ROOT, iconPath)), true, `${iconPath} should exist`);
   }
 });
 
-test("sets the active icon when app.bokio.se announces its tab", async () => {
-  const { calls, messageListener } = await loadBackgroundWithChromeMock();
-
-  messageListener(
-    { type: "bokio-invoice-helper:app-tab" },
-    { tab: { id: 12 }, url: "https://app.bokio.se/company-id" }
-  );
-
-  assert.deepEqual(JSON.parse(JSON.stringify(calls.at(-1))), {
-    tabId: 12,
-    path: {
-      16: "icons/icon-16.png",
-      32: "icons/icon-32.png",
-      48: "icons/icon-48.png",
-      128: "icons/icon-128.png"
-    }
+test("sets active toolbar imageData for app.bokio.se tabs", async () => {
+  const { calls, fetched } = await loadBackgroundWithChromeMock({
+    activeTab: { id: 12, url: "https://app.bokio.se/company-id" }
   });
+  const call = serialize(calls.at(-1));
+
+  assert.equal(call.tabId, 12);
+  assert.equal(call.path, undefined);
+  assert.equal(
+    call.imageData[16].source,
+    "chrome-extension://extension-id/icons/icon-16.png"
+  );
+  assert.equal(call.imageData[128].width, 128);
+  assert.equal(
+    fetched.includes("chrome-extension://extension-id/icons/icon-16.png"),
+    true
+  );
 });
 
-test("injects helper scripts into existing Bokio tabs on install", async () => {
-  const { installedListener, scriptCalls } = await loadBackgroundWithChromeMock({
-    queryTabs: [{ id: 7, url: "https://app.bokio.se/company-id/invoicing/invoices/" }]
+test("sets inactive toolbar imageData outside app.bokio.se", async () => {
+  const { calls, fetched } = await loadBackgroundWithChromeMock({
+    activeTab: { id: 13, url: "https://bokio.se/" }
   });
+  const call = serialize(calls.at(-1));
 
-  installedListener();
-  await new Promise((resolve) => setTimeout(resolve, 0));
-
-  assert.deepEqual(JSON.parse(JSON.stringify(scriptCalls)), [
-    {
-      target: { tabId: 7 },
-      files: ["src/icon-state.js", "src/content.js"]
-    }
-  ]);
+  assert.equal(call.tabId, 13);
+  assert.equal(call.path, undefined);
+  assert.equal(
+    call.imageData[16].source,
+    "chrome-extension://extension-id/icons/icon-inactive-16.png"
+  );
+  assert.equal(call.imageData[128].height, 128);
+  assert.equal(
+    fetched.includes("chrome-extension://extension-id/icons/icon-inactive-16.png"),
+    true
+  );
 });

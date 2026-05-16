@@ -10,7 +10,7 @@ method, so your invoices go out with the delivery option you actually meant
 to choose. It works across all Bokio interface languages because it targets
 the underlying delivery option instead of visible text.
 
-This is a small WebExtension that watches the Bokio app shell and only acts on invoice edit pages:
+This is a small WebExtension that runs only on Bokio invoice edit pages:
 
 ```text
 https://app.bokio.se/*/invoicing/invoices/edit/*
@@ -55,7 +55,7 @@ The tests use Playwright. If your local Playwright install does not already have
 npx playwright install chromium
 ```
 
-Regenerate icons after updating `icons/source/favicon-32x32.png`:
+Regenerate icons after updating `icons/source/store-icon.png`, `icons/source/icon.png`, or `icons/source/icon-inactive.png`:
 
 ```sh
 npm run generate-icons
