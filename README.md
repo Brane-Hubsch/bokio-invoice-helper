@@ -16,7 +16,7 @@ This is a small WebExtension that runs only on Bokio invoice edit pages:
 https://app.bokio.se/*/invoicing/invoices/edit/*
 ```
 
-When Bokio has already rendered the email delivery options, the extension selects the code-defined `LinkAndPdf` invoice delivery type. It does not select the outer "email to customer" delivery method.
+When Bokio has already rendered the email delivery options, the extension selects the code-defined `LinkAndPdf` invoice delivery type. The toolbar popup also includes an optional setting to autoselect the outer "email to customer" delivery method.
 
 ## Screenshots
 
