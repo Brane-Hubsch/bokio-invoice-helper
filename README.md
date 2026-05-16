@@ -24,6 +24,10 @@ When Bokio has already rendered the email delivery options, the extension select
 | --- | --- |
 | ![Bokio invoice delivery options without Invoice Helper](docs/images/without-invoice-helper.png) | ![Bokio invoice delivery options with Invoice Helper](docs/images/with-invoice-helper.png) |
 
+![Invoice Helper for Bokio settings popup](docs/images/settings-pop-up.png)
+
+Design file: [Invoice Helper for Bokio](https://www.figma.com/design/dQi1np2NSqPSsxy44hhLbt/Invoice-Helper-for-Bokio?node-id=0-1&t=Owb54m0x5j83OVD3-1)
+
 ## Install in Chrome or Opera
 
 1. Open `chrome://extensions` or `opera://extensions`.
