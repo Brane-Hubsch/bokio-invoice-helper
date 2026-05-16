@@ -57,7 +57,7 @@ body {
   border-bottom: 1px solid #d9dee3;
   color: #27313c;
   cursor: default;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.3;
 }
 
@@ -126,7 +126,7 @@ body {
 }
 
 .footer a {
-  color: #275f8f;
+  color: #1259ef;
   text-decoration: none;
 }
 
